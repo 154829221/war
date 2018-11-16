@@ -20,9 +20,10 @@ def state_status(stat_status):
         sscountry.set('country', str(i["country"]))
         sscountry.set('state', str(i["state"]))
         sscountry.text=str(i["sum(develop_point)"])
+    print 'templates/stat_status.xml'
+    tree.write('templates/stat_status.xml',encoding="UTF-8",xml_declaration=True)
 
-    tree.write('template/stat_status.xml',encoding="UTF-8",xml_declaration=True)
-
-    response = make_response(open('template/stat_status.xml').read())
+    response = make_response(open('templates/stat_status.xml').read())
     response.headers["Content-type"] = "text/xml"
     return  response
+

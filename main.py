@@ -14,6 +14,7 @@ if __name__ == '__main__':
         exit(2)
     else:
         #将数据库操作限制在dbtools包内。
-        #dbhanle=dh.MysqlHandle(dbconn)
+        #启用调试模式
+        app.debug = True
         app.run(host='0.0.0.0')
 
