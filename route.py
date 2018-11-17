@@ -2,8 +2,8 @@
 
 import sys,os
 from flask import render_template
-from flask import Markup
-from flask import Flask, request, redirect, url_for
+from flask import Markup,flash
+from flask import Flask, request, redirect, url_for,abort,session,escape
 from werkzeug import secure_filename
 from dbtools import *
 from xmltools import statexml as sx
@@ -22,6 +22,9 @@ UPLOAD_FOLDER = 'uploads'
 app = Flask(__name__,template_folder='templates')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+#只需设置一个名为 FLASKR_SETTINGS 的环境变量，指向要加载的配置文件。启用静默模式告诉 Flask 在没有设置该环境变量的情况下噤声。
+app.config.from_envvar('FLASKR_SETTINGS', silent=True)
 
 @app.route('/stat')
 def stat():
@@ -67,6 +70,39 @@ def show_post(post_id):
 #     # the code below is executed if the request method
 #     # was GET or the credentials were invalid
 #     return render_template('login.html', error=error)
+
+
+#session
+@app.route('/')
+def show_entries():
+    return redirect(url_for('stat_status'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        if request.form['username'] != 'dengyunfei':
+            error = 'Invalid username'
+        elif request.form['password'] != '123456':
+            error = 'Invalid password'
+        else:
+            session['logged_in'] = True
+            flash('You were logged in')
+            return redirect(url_for('show_entries'))
+    return render_template('login.html', error=error)
+
+@app.route('/logout')
+def logout():
+    # remove the username from the session if it's there
+    session.pop('logged_in', None)
+    flash('You were logged out')
+    return redirect(url_for('login'))
+# set the secret key.  keep this really secret:
+#app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
+app.secret_key = os.urandom(24)
+
+#消息闪现 http://docs.jinkan.org/docs/flask/patterns/flashing.html#message-flashing-pattern
+
 
 #文件上传
 ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
@@ -141,17 +177,38 @@ def hello(name=None):
         resp.set_cookie('has_cookie', 'true')
         return resp
 
+#401 跳转
+@app.route('/redirect')
+def redirect1func():
+    #url_for('redirect2func') == '/redirect2'
+    return redirect(url_for('redirect2func'))
+
+@app.route('/redirect2')
+def redirect2func():
+    abort(401)
+    # this_is_never_executed()
+
+@app.errorhandler(404)
+def page_not_found(error):
+    resp = make_response(render_template('page_not_found.html'),404)
+    #设定头信息
+    resp.headers['X-Something'] = 'A value'
+    return resp
+
 #http://192.168.33.101:5000/state_status
 @app.route('/state_status')
 def stat_status():
     #获取了数据库的操作句柄
     dconn = get_mysql_handle()
     statStatus = dconn.getStatStatus()
-    if statStatus[1]!=None:
-        print "Can not get state status."
-        return "Can not get state status."
-    else:
-        print "stat_status_to_xml= sx.state_status(statStatus[0])"
-        stat_status_to_xml= sx.state_status(statStatus[0])
-        return stat_status_to_xml
+    # if statStatus[1]!=None:
+    #     print "Can not get state status."
+    #     return "Can not get state status."
+    # else:
+    #     print "stat_status_to_xml= sx.state_status(statStatus[0])"
+    stat_status_to_xml= sx.state_status(statStatus)
+    return stat_status_to_xml
 
+app.logger.debug('A value for debugging')
+app.logger.warning('A warning occurred (%d apples)', 42)
+app.logger.error('An error occurred')
